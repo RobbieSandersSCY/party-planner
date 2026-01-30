@@ -6,44 +6,103 @@ const API = BASE + COHORT + RESOURCE;
 
 // === State ===
 let parties = [];
-let selectedParty = [];
+let selectedParty;
 
-// fetch API
-
-const GetParties = async() => {
+/** Updates state with all parties from the API */
+async function getParties() {
   try {
-    const res = await fetch(API);
-    const resBod = await res.json();
-    parties = resBod.data;
-  } catch(err) {
-    console.log("ERROR RETRIEVING PARTIES:", err);
+    const response = await fetch(API);
+    const result = await response.json();
+    parties = result.data;
+    render();
+  } catch (e) {
+    console.error(e);
   }
 }
 
+/** Updates state with a single party from the API */
+async function getParty(id) {
+  try {
+    const response = await fetch(API + "/" + id);
+    const result = await response.json();
+    selectedParty = result.data;
+    render();
+  } catch (e) {
+    console.error(e);
+  }
+}
 
 // === Components ===
 
-function PartyList() {
-  // loop thru parties
-  // 
+/** Party name that shows more details about the party when clicked */
+function PartyListItem(party) {
+  const $li = document.createElement("li");
+
+  if(party.id === selectedParty?.id) {
+    $li.classList.add("selected");
+  }
+  
+  $li.innerHTML = `
+    <a href="#selected">${party.name}</a>
+  `;
+  $li.addEventListener("click", () => getParty(party.id));
+  return $li;
 }
 
+/** A list of names of all parties */
+function PartyList() {
+  const $ul = document.createElement("ul");
+  $ul.classList.add("partylist");
+
+  const $parties = parties.map(PartyListItem);
+  $ul.replaceChildren(...$parties);
+
+  return $ul;
+}
+
+/** Detailed information about the selected party */
+function PartyDetails() {
+  if (!selectedParty) {
+    const $p = document.createElement("p");
+    $p.textContent = "Please select an party to learn more.";
+    return $p;
+  }
+
+  const $party = document.createElement("section");
+  $party.classList.add("party");
+  $party.innerHTML = `
+    <h3>${selectedParty.name} #${selectedParty.id}</h3>
+    <figure>
+      <img alt=${selectedParty.name} src=${selectedParty.imageUrl} />
+    </figure>
+    <p>${selectedParty.description}</p>
+  `;
+  return $party;
+}
+
+// === Render ===
 function render() {
   const $app = document.querySelector("#app");
   $app.innerHTML = `
-  <h1>Party Planner</h1>
-  <section>
-    <h2>Upcoming Parties</h2>
-    <PartyList></PartyList>
-  </section>
-  
+    <h1>Party Planner</h1>
+    <main>
+      <section>
+        <h2>Upcoming Parties</h2>
+        <PartyList></PartyList>
+      </section>
+      <section id="selected">
+        <h2>Party Details</h2>
+        <PartyDetails></PartyDetails>
+      </section>
+    </main>
   `;
-  // $app.querySelector("PartyList").replaceWith(PartyList());
+  $app.querySelector("PartyList").replaceWith(PartyList());
+  $app.querySelector("PartyDetails").replaceWith(PartyDetails());
 }
 
-const init = async() => {
-  await GetParties();
-  await render();
+async function init() {
+  await getParties();
+  render();
 }
 
 init();
